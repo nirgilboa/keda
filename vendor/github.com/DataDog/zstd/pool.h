@@ -1,6 +1,6 @@
 #ifndef USE_EXTERNAL_ZSTD
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) Yann Collet, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under both the BSD-style license (found in the
@@ -38,12 +38,6 @@ POOL_ctx* POOL_create_advanced(size_t numThreads, size_t queueSize,
  *  Free a thread pool returned by POOL_create().
  */
 void POOL_free(POOL_ctx* ctx);
-
-
-/*! POOL_joinJobs() :
- *  Waits for all queued jobs to finish executing.
- */
-void POOL_joinJobs(POOL_ctx* ctx);
 
 /*! POOL_resize() :
  *  Expands or shrinks pool's number of threads.
