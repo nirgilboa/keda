@@ -24,7 +24,8 @@ extern "C" {
 #if defined(ZSTD_MULTITHREAD) && defined(_WIN32)
 
 /**
- * Windows minimalist Pthread Wrapper
+ * Windows minimalist Pthread Wrapper, based on :
+ * http://www.cse.wustl.edu/~schmidt/win32-cv-1.html
  */
 #ifdef WINVER
 #  undef WINVER
@@ -62,12 +63,16 @@ extern "C" {
 #define ZSTD_pthread_cond_broadcast(a)  WakeAllConditionVariable((a))
 
 /* ZSTD_pthread_create() and ZSTD_pthread_join() */
-typedef HANDLE ZSTD_pthread_t;
+typedef struct {
+    HANDLE handle;
+    void* (*start_routine)(void*);
+    void* arg;
+} ZSTD_pthread_t;
 
 int ZSTD_pthread_create(ZSTD_pthread_t* thread, const void* unused,
                    void* (*start_routine) (void*), void* arg);
 
-int ZSTD_pthread_join(ZSTD_pthread_t thread);
+int ZSTD_pthread_join(ZSTD_pthread_t thread, void** value_ptr);
 
 /**
  * add here more wrappers as required
@@ -95,7 +100,7 @@ int ZSTD_pthread_join(ZSTD_pthread_t thread);
 
 #define ZSTD_pthread_t                  pthread_t
 #define ZSTD_pthread_create(a, b, c, d) pthread_create((a), (b), (c), (d))
-#define ZSTD_pthread_join(a)         pthread_join((a),NULL)
+#define ZSTD_pthread_join(a, b)         pthread_join((a),(b))
 
 #else /* DEBUGLEVEL >= 1 */
 
@@ -120,7 +125,7 @@ int ZSTD_pthread_cond_destroy(ZSTD_pthread_cond_t* cond);
 
 #define ZSTD_pthread_t                  pthread_t
 #define ZSTD_pthread_create(a, b, c, d) pthread_create((a), (b), (c), (d))
-#define ZSTD_pthread_join(a)         pthread_join((a),NULL)
+#define ZSTD_pthread_join(a, b)         pthread_join((a),(b))
 
 #endif
 

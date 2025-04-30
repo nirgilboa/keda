@@ -1,6 +1,6 @@
 #ifndef USE_EXTERNAL_ZSTD
 /*
- * Copyright (c) Yann Collet, Meta Platforms, Inc. and affiliates.
+ * Copyright (c) Yann Collet, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under both the BSD-style license (found in the
