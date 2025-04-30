@@ -3,6 +3,7 @@ package scalers
 import (
 	"context"
 	"fmt"
+	"github.com/DataDog/datadog-api-client-go/v2/api/datadogV1"
 	"io"
 	"net/http"
 	"regexp"
@@ -11,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	datadog "github.com/DataDog/datadog-api-client-go/api/v1/datadog"
+	datadog "github.com/DataDog/datadog-api-client-go/v2/api/datadog"
 	"github.com/go-logr/logr"
 	"github.com/tidwall/gjson"
 	v2 "k8s.io/api/autoscaling/v2"
@@ -281,8 +282,9 @@ func newDatadogAPIConnection(ctx context.Context, meta *datadogMetadata, config 
 	configuration := datadog.NewConfiguration()
 	configuration.HTTPClient = kedautil.CreateHTTPClient(config.GlobalHTTPTimeout, false)
 	apiClient := datadog.NewAPIClient(configuration)
+	api := datadogV1.NewAuthenticationApi(apiClient)
 
-	_, _, err := apiClient.AuthenticationApi.Validate(ctx) //nolint:bodyclose
+	_, _, err := api.Validate(ctx) //nolint:bodyclose
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to Datadog API endpoint: %w", err)
 	}
@@ -319,9 +321,11 @@ func (s *datadogScaler) getQueryResult(ctx context.Context) (float64, error) {
 			"site": s.metadata.DatadogSite,
 		})
 
+	api := datadogV1.NewMetricsApi(s.apiClient)
+
 	timeWindowTo := time.Now().Unix() - int64(s.metadata.TimeWindowOffset)
 	timeWindowFrom := timeWindowTo - int64(s.metadata.Age)
-	resp, r, err := s.apiClient.MetricsApi.QueryMetrics(ctx, timeWindowFrom, timeWindowTo, s.metadata.Query) //nolint:bodyclose
+	resp, r, err := api.QueryMetrics(ctx, timeWindowFrom, timeWindowTo, s.metadata.Query) //nolint:bodyclose
 
 	if r != nil {
 		if r.StatusCode == 429 {
