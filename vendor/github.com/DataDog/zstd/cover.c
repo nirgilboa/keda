@@ -1,6 +1,6 @@
 #ifndef USE_EXTERNAL_ZSTD
 /*
- * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) Yann Collet, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under both the BSD-style license (found in the
@@ -35,7 +35,6 @@
 #include "pool.h"
 #include "threading.h"
 #include "zstd_internal.h" /* includes zstd.h */
-#include "bits.h" /* ZSTD_highbit32 */
 #include "zdict.h"
 #include "cover.h"
 
@@ -543,7 +542,7 @@ static void COVER_ctx_destroy(COVER_ctx_t *ctx) {
 
 /**
  * Prepare a context for dictionary building.
- * The context is only dependent on the parameter `d` and can be used multiple
+ * The context is only dependent on the parameter `d` and can used multiple
  * times.
  * Returns 0 on success or error code on error.
  * The context must be destroyed with `COVER_ctx_destroy()`.
@@ -648,7 +647,7 @@ static size_t COVER_ctx_init(COVER_ctx_t *ctx, const void *samplesBuffer,
 
 void COVER_warnOnSmallCorpus(size_t maxDictSize, size_t nbDmers, int displayLevel)
 {
-  const double ratio = (double)nbDmers / (double)maxDictSize;
+  const double ratio = (double)nbDmers / maxDictSize;
   if (ratio >= 10) {
       return;
   }
@@ -952,17 +951,9 @@ void COVER_best_finish(COVER_best_t *best, ZDICT_cover_params_t parameters,
   }
 }
 
-static COVER_dictSelection_t setDictSelection(BYTE* buf, size_t s, size_t csz)
-{
-    COVER_dictSelection_t ds;
-    ds.dictContent = buf;
-    ds.dictSize = s;
-    ds.totalCompressedSize = csz;
-    return ds;
-}
-
 COVER_dictSelection_t COVER_dictSelectionError(size_t error) {
-    return setDictSelection(NULL, 0, error);
+    COVER_dictSelection_t selection = { NULL, 0, error };
+    return selection;
 }
 
 unsigned COVER_dictSelectionIsError(COVER_dictSelection_t selection) {
@@ -1015,8 +1006,9 @@ COVER_dictSelection_t COVER_selectDict(BYTE* customDictContent, size_t dictBuffe
   }
 
   if (params.shrinkDict == 0) {
+    COVER_dictSelection_t selection = { largestDictbuffer, dictContentSize, totalCompressedSize };
     free(candidateDictBuffer);
-    return setDictSelection(largestDictbuffer, dictContentSize, totalCompressedSize);
+    return selection;
   }
 
   largestDict = dictContentSize;
@@ -1048,16 +1040,20 @@ COVER_dictSelection_t COVER_selectDict(BYTE* customDictContent, size_t dictBuffe
       return COVER_dictSelectionError(totalCompressedSize);
     }
 
-    if ((double)totalCompressedSize <= (double)largestCompressed * regressionTolerance) {
+    if (totalCompressedSize <= largestCompressed * regressionTolerance) {
+      COVER_dictSelection_t selection = { candidateDictBuffer, dictContentSize, totalCompressedSize };
       free(largestDictbuffer);
-      return setDictSelection( candidateDictBuffer, dictContentSize, totalCompressedSize );
+      return selection;
     }
     dictContentSize *= 2;
   }
   dictContentSize = largestDict;
   totalCompressedSize = largestCompressed;
-  free(candidateDictBuffer);
-  return setDictSelection( largestDictbuffer, dictContentSize, totalCompressedSize );
+  {
+    COVER_dictSelection_t selection = { largestDictbuffer, dictContentSize, totalCompressedSize };
+    free(candidateDictBuffer);
+    return selection;
+  }
 }
 
 /**
